@@ -15,70 +15,70 @@ Tutorial
 
 class FatTree(Topo):
     # offer the configuration of Fat-Tree
-    def build(ft, k=4):
+    def build(self, k=4):
         # total number in this topology
-        ft.k = k
-        ft.pods = k
-        ft.aggrSw = ft.pods * (k // 2)
-        ft.edgeSw = ft.pods * (k // 2)
-        ft.coreSw = (k // 2) ** 2
+        self.k = k
+        self.pods = k
+        self.aggrSw = self.pods * (k // 2)
+        self.edgeSw = self.pods * (k // 2)
+        self.coreSw = (k // 2) ** 2
         # host number in each pod
-        ft.PodHost = (k // 2) ** 2
+        self.PodHost = (k // 2) ** 2
 
         # utilize the arguments above to build topo
-        ft.addCoreSw()
-        ft.addAggrSw()
-        ft.addEdgeSw()
-        ft.addHosts()
-        ft.setLink()
+        self.addCoreSw()
+        self.addAggrSw()
+        self.addEdgeSw()
+        self.addHosts()
+        self.setLink()
 
-    def addCoreSw(ft):
-        for sw in range(ft.coreSw):
-            ft.addSwitch('core{}'.format(sw + 1), 
+    def addCoreSw(self):
+        for sw in range(self.coreSw):
+            self.addSwitch('core{}'.format(sw + 1), 
                          failMode='standalone', stp=True)
         # coreSw is identified by its own ID, which means it can be presented as 1 element turple
 
-    def addAggrSw(ft):
-        for pod in range(ft.pods):
-            for sw in range(ft.k // 2):
-                ft.addSwitch('aggr{}{}'.format(pod + 1, sw + 1), 
+    def addAggrSw(self):
+        for pod in range(self.pods):
+            for sw in range(self.k // 2):
+                self.addSwitch('aggr{}{}'.format(pod + 1, sw + 1), 
                              failMode='standalone', stp=True)
         # aggrSw have to be presented as (pod, sw) in turple
 
-    def addEdgeSw(ft):
-        for pod in range(ft.pods):
-            for sw in range(ft.k // 2):
-                ft.addSwitch('edge{}{}'.format(pod + 1, sw + 1), 
+    def addEdgeSw(self):
+        for pod in range(self.pods):
+            for sw in range(self.k // 2):
+                self.addSwitch('edge{}{}'.format(pod + 1, sw + 1), 
                              failMode='standalone', stp=True)
         # edgeSw have to be presented as (pod, sw) in turple
 
-    def addHosts(ft):
-        for pod in range(ft.pods):
-            for sw in range(ft.k // 2):
-                for hst in range(ft.k // 2):
-                    ft.addHost('host{}{}{}'.format(pod + 1, sw + 1, hst + 1), 
+    def addHosts(self):
+        for pod in range(self.pods):
+            for sw in range(self.k // 2):
+                for hst in range(self.k // 2):
+                    self.addHost('host{}{}{}'.format(pod + 1, sw + 1, hst + 1), 
                                failMode='standalone', stp=True)
         # host have to be presented as (pod, sw, hst) in turple
     
-    def setLink(ft):
-        for pod in range(ft.pods):
+    def setLink(self):
+        for pod in range(self.pods):
             # aggrSw -> coreSw
-            for aggr in range(ft.k // 2):
-                for core in range(ft.k // 2):
-                    ft.addLink('aggr{}{}'.format(pod + 1, aggr + 1), 
-                               'core{}'.format(core + aggr * (ft.k // 2) + 1))
+            for aggr in range(self.k // 2):
+                for core in range(self.k // 2):
+                    self.addLink('aggr{}{}'.format(pod + 1, aggr + 1), 
+                               'core{}'.format(core + aggr * (self.k // 2) + 1))
                     # For coreSw is identified by its own ID
             
             # aggrSw -> edgeSw
-            for aggr in range(ft.k // 2):
-                for edge in range(ft.k // 2):
-                    ft.addLink('aggr{}{}'.format(pod + 1, aggr + 1), 
+            for aggr in range(self.k // 2):
+                for edge in range(self.k // 2):
+                    self.addLink('aggr{}{}'.format(pod + 1, aggr + 1), 
                                'edge{}{}'.format(pod + 1, edge + 1))
             
             # edgeSw -> host
-            for edge in range(ft.k // 2):
-                for hst in range(ft.k // 2):
-                    ft.addLink('edge{}{}'.format(pod + 1, edge + 1), 
+            for edge in range(self.k // 2):
+                for hst in range(self.k // 2):
+                    self.addLink('edge{}{}'.format(pod + 1, edge + 1), 
                                'host{}{}{}'.format(pod + 1, edge + 1, hst + 1))
 
 
