@@ -19,7 +19,7 @@
   - the notes and analysis of the lectures
   - the experiment report of each project
 - lab-code
-  - the code of each project
+  - my scripts of each project
 - slide
   - the slide of each lecture
   - the supplementary papers
