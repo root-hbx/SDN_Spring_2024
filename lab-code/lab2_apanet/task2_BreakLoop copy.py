@@ -120,7 +120,7 @@ class Switch_Dict(app_manager.RyuApp):
                             )
                             actions = []
                             # higher than self-learning
-                            self.add_flow(dp, 20, match, actions)
+                            self.add_flow(dp, 20, match, actions) # ?
 
                             out = parser.OFPPacketOut(
                                 datapath=dp,
