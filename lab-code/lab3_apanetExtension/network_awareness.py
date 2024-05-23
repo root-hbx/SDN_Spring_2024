@@ -18,16 +18,11 @@ import time
 
 # this script is to get network topology by controller
 # with the help of Ryu
-# method:
-'''
-    sudo mn --topo=tree,2,2 --controller remote
-    ryu-manager NetworkAwareness.py --observe-links
-'''
+# all solutions in exp1&2 are listed in this code
 
 GET_TOPOLOGY_INTERVAL = 2
 SEND_ECHO_REQUEST_INTERVAL = 0.05
 GET_DELAY_INTERVAL = 2
-
 
 class NetworkAwareness(app_manager.RyuApp):
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
@@ -72,7 +67,7 @@ class NetworkAwareness(app_manager.RyuApp):
         dp = datapath
         ofp = dp.ofproto
         parser = dp.ofproto_parser
-        inst = []
+        inst = [] # empty action set for deleting
         
         req = parser.OFPFlowMod (
               dp, 
@@ -84,6 +79,17 @@ class NetworkAwareness(app_manager.RyuApp):
               match,
               inst
         )
+        '''
+        0, 0, 0: flowTable ID, Prio, Buffer ID
+        ofp.OFPFC_DELETE: deleting
+        0, 0, 0: overTime (general soft hard)
+        ofp.OFP_NO_BUFFER: no buffer allocation
+        ofp.OFPP_ANY: delete all ports
+        ofp.OFPG_ANY: delete all groups
+        ofp.OFPFF_SEND_FLOW_REM: sending "moved" while deleting flowTable
+        match: matching part
+        inst: empty action set for deleting
+        '''
         dp.send_msg(req)
         
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
@@ -104,24 +110,30 @@ class NetworkAwareness(app_manager.RyuApp):
 
     @set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
     def port_status_handler(self, ev):
+        # gandle Sw. port changing
         msg = ev.msg
         datapath = ev.datapath
         ofproto = ev.ofproto
         parser = datapath.ofproto_parser
         
+        # the kind of change
         if msg.reason in [ofproto.OFPPR_ADD, ofproto.OFPPR_MODIFY]:
+            # add / modify: overwrite the mapping of changing port
             datapath.ports[msg.desc.port_no] = msg.desc
+            # clear old topology
             self.topo_map.clear()
             
-            for dpid in self.port_info.keys():
-                for port in self.port_info[dpid]:
+            for dpid in self.port_info.keys(): # linked-path
+                for port in self.port_info[dpid]: # corresponding ports of these path
                     match = parser.OFPMatch(in_port = port)
-                    self.delete_flow(self.switch_info[dpid],match)
+                    self.delete_flow(self.switch_info[dpid], match) # delete flowTable
         elif msg.reason == ofproto.OFPPR_DELETE:
+            # delete: remove this port
             datapath.ports.pop(msg.desc.port_no, None)
         else:
             return
         
+        # log
         self.send_event_to_observers(ofp_event.EventOFPPortStateChange(datapath,msg.reason, msg.desc.port_no),datapath.state)
         
     @set_ev_cls(ofp_event.EventOFPStateChange, [MAIN_DISPATCHER, DEAD_DISPATCHER])
@@ -140,7 +152,7 @@ class NetworkAwareness(app_manager.RyuApp):
     def echo_reply_handler(self, ev):
         now_timestamp = time.time()
         try:
-            echo_delay = now_timestamp - eval(ev.msg.data)
+            echo_delay = now_timestamp - eval(ev.msg.data) # currentTime - sendTime
             self.controller_switch_delay[ev.msg.datapath.id] = echo_delay * 1000
         except:
             print ("Overtime! Error!")
@@ -149,16 +161,29 @@ class NetworkAwareness(app_manager.RyuApp):
     def send_echo_request(self, switch):
         datapath = switch.dp
         parser = datapath.ofproto_parser
-        echo_req = parser.OFPEchoRequest(datapath,data=bytes("%.12f"%time.time()))
+        echo_req = parser.OFPEchoRequest(datapath, data=bytes("%.12f"%time.time()))
         datapath.send_msg(echo_req)
+    
+    '''
+    echo_reply_handler: 处理和解析从交换机接收到的 Echo Reply 消息，计算延迟并存储
+    send_echo_request:  向交换机发送 Echo Request 消息，包含发送时间戳
+    
+    - 控制器通过 send_echo_request 主动发送 Echo Request 消息。
+    - 交换机收到 Echo Request 消息后，回应 Echo Reply 消息。
+    - 控制器接收到 Echo Reply 消息时，调用 echo_reply_handler 计算和记录延迟
+    '''
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
     def packet_in_handler(self, ev):
+        '''
+        PacketIn 事件在Sw.接收到数据包并将其发送到controller时触发
+        该方法处理接收到的数据包, 并在特定情况下(LLDP)执行特定的操作
+        '''
         msg = ev.msg
         dp = msg.datapath
         ofp = dp.ofproto
         parser = dp.ofproto_parser
-        dpid = dp.id
+        dpid = dp.id # datapath ID
         
         pkt = packet.Packet(msg.data)
         eth_pkt = pkt.get_protocol(ethernet.ethernet)
@@ -168,6 +193,10 @@ class NetworkAwareness(app_manager.RyuApp):
         if pkt_type == ether_types.ETH_TYPE_LLDP:
             src_dpid, src_port_no = LLDPPacket.lldp_parse(msg.data)
             if self.switches is None:
+                '''
+                在控制器启动并且尚未处理任何 PacketIn 事件之前，
+                self.switches 很可能是 None, 因为它还没有被初始化           
+                '''
                 self.switches = lookup_service_brick('switches')
             
             for port in self.switches.ports.keys():
