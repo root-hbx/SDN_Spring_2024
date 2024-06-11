@@ -1,7 +1,7 @@
 import requests
 import json
 
-def add_flow(dpid, src_ip, dst_ip, in_port, out_port, src_port=6666, dst_port=6666, priority=10):
+def add_flow(dpid, src_ip, dst_ip, in_port, out_port, src_port=6666, dst_port=6666, priority=1):
     flow = {
         "dpid": dpid,
         "idle_timeout": 0,
