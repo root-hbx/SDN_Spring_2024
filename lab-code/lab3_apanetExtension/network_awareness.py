@@ -238,7 +238,7 @@ class NetworkAwareness(app_manager.RyuApp):
 
                 # s1 -> s2: s1.port, s2 -> s1: s2.port
                 self.port_link[(link.src.dpid,link.src.port_no)]=(link.src.dpid, link.dst.dpid) # src-srcPort -- dst
-                self.port_link[(link.dst.dpid,link.dst.port_no)] = (link.dst.dpid, link.src.dpid) # dst-dstPort -- src
+                self.port_link[(link.dst.dpid,link.dst.port_no)]=(link.dst.dpid, link.src.dpid) # dst-dstPort -- src
 
                 self.link_info[(link.src.dpid, link.dst.dpid)] = link.src.port_no
                 self.link_info[(link.dst.dpid, link.src.dpid)] = link.dst.port_no
